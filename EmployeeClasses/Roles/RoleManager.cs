@@ -24,11 +24,14 @@ using UnityEngine.UI;
 using System.ComponentModel;
 using System.ComponentModel.Design;
 using JetBrains.Annotations;
+using System.Data;
 
 namespace EmployeeClasses.Roles
 {
     internal class RoleManager : NetworkBehaviour
     {
+        private const float KICK_COST = 0.4f;
+
         public string selectedRole;
         public List<RoleTag> tags;
         public string ability;
@@ -46,6 +49,7 @@ namespace EmployeeClasses.Roles
         private int threatLevel = 0;
         public int weightPenaltyThreshhold = 0;
         public float bulletDamage = 0;
+        public float fogVisibility = 1;
 
         public float sprintTime = 1;
         public float sprintMeter = 1;
@@ -132,6 +136,8 @@ namespace EmployeeClasses.Roles
             if (headlamp != null)
                 DestroyHeadlamp();
 
+            sprintMeter = 1;
+
             maxSprintSpeed = 2.25f;
             maxHealth = 100;
             weightPenalty = 1f;
@@ -149,6 +155,7 @@ namespace EmployeeClasses.Roles
             holdTimer = -1;
             stimmed = false;
             sprintTime = 1;
+            fogVisibility = 1;
             if (charges == 0)
                 charges = 1;
 
@@ -228,6 +235,10 @@ namespace EmployeeClasses.Roles
                 {
                     sprintTime = tag.Power;
                 }
+                else if (tag.Id == (int)RoleTag.Ids.FOG_VISIBILITY)
+                {
+                    fogVisibility = tag.Power;
+                }
             }
 
             if (ability == "STIM")
@@ -246,21 +257,73 @@ namespace EmployeeClasses.Roles
             active = false;
 
             if (NetworkManager.IsHost)
-                ApplyRoleClientRpc(playerID, footstepVolume);
+                ApplyRoleClientRpc(playerID, footstepVolume, selectedRole);
             else
-                ApplyRoleServerRpc(playerID, footstepVolume);
+                ApplyRoleServerRpc(playerID, footstepVolume, selectedRole);
         }
 
         [ServerRpc(RequireOwnership = false)]
-        public void ApplyRoleServerRpc(int id, float footstepVolume)
+        public void ApplyRoleServerRpc(int id, float footstepVolume, string role)
         {
-            ApplyRoleClientRpc(id, footstepVolume);
+            ApplyRoleClientRpc(id, footstepVolume, role);
         }
 
         [ClientRpc]
-        public void ApplyRoleClientRpc(int id, float footstepVolume)
+        public void ApplyRoleClientRpc(int id, float footstepVolume, string role)
         {
-            StartOfRound.Instance.allPlayerScripts[id].GetComponent<RoleManager>().footstepVolume = footstepVolume;
+            PlayerControllerB player = StartOfRound.Instance.allPlayerScripts[id];
+            player.GetComponent<RoleManager>().footstepVolume = footstepVolume;
+            player.GetComponent<RoleManager>().selectedRole = role;
+            player.usernameBillboardText.text = player.playerUsername + "\n[" + selectedRole + "]\n\n";
+        }
+
+        public void SyncRoles()
+        {
+            if (NetworkManager.Singleton.IsHost)
+                BroadcastRoleClientRpc();
+            else
+                BroadcastRoleServerRpc();
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        public void BroadcastRoleServerRpc()
+        {
+            ApplyRoleClientRpc(playerID, footstepVolume, selectedRole);
+        }
+
+        [ClientRpc]
+        public void BroadcastRoleClientRpc()
+        {
+            if (NetworkManager.Singleton.IsHost)
+                ApplyRoleServerRpc(playerID, footstepVolume, selectedRole);
+            else
+                ApplyRoleClientRpc(playerID, footstepVolume, selectedRole);
+        }
+
+        public void SyncClassObjects()
+        {
+            if (NetworkManager.Singleton.IsHost)
+                BroadcastRoleClientRpc();
+            else
+                BroadcastRoleServerRpc();
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        public void SyncClassObjectsServerRpc()
+        {
+            SyncClassObjectsClientRpc();
+        }
+
+        [ClientRpc]
+        public void SyncClassObjectsClientRpc()
+        {
+            if (headlamp != null)
+                CreateHeadlamp();
+
+            if (NetworkManager.Singleton.IsHost)
+                ApplyRoleServerRpc(playerID, footstepVolume, selectedRole);
+            else
+                ApplyRoleClientRpc(playerID, footstepVolume, selectedRole);
         }
 
         public static float GetScanRange(float range)
@@ -314,6 +377,11 @@ namespace EmployeeClasses.Roles
             if (!freeCharge && charges < 3)
                 charges += 1;
             freeCharge = true;
+
+            if (NetworkManager.IsHost)
+                ApplyRoleClientRpc(playerID, footstepVolume, selectedRole);
+            else
+                ApplyRoleServerRpc(playerID, footstepVolume, selectedRole);
         }
 
         public void Update()
@@ -394,7 +462,8 @@ namespace EmployeeClasses.Roles
                 if (abilityCooldown > -10)
                     abilityCooldown -= Time.deltaTime * 1;
 
-                if (abilityCooldown > 0) {
+                if (abilityCooldown > 0)
+                {
                     messages.Add("" + (int)abilityCooldown);
                 }
                 else if (ability == "HACK")
@@ -434,7 +503,7 @@ namespace EmployeeClasses.Roles
                     else
                         RolesGUI.instance.HideTip();
                 }
-                else if (abilityCooldown <= 0)
+                else if (abilityCooldown <= 0 && !(ability == "KICK" && sprintMeter < KICK_COST))
                     messages.Add(ability + $": [Press {ModBase.keybinds.SkillKey.GetBindingDisplayString()[0]}]");
                     
 
@@ -460,7 +529,7 @@ namespace EmployeeClasses.Roles
             if (holdTimer == -1)
                 holdTimer = 0;
 
-            if (abilityCooldown < 0 && player.isPlayerControlled && !player.inTerminalMenu && (!StartOfRound.Instance.inShipPhase || StartOfRound.Instance.IsHost))
+            if (abilityCooldown < 0 && player.isPlayerControlled && (!StartOfRound.Instance.inShipPhase || StartOfRound.Instance.IsHost))
             {
                 if (ability == "KICK")
                     TriggerKick();
@@ -508,7 +577,7 @@ namespace EmployeeClasses.Roles
                 } else if (holdTimer >= 0.6f)
                 {
                     StopItemAudio(playerID);
-                    PlayClipFromItemAudio(9, playerID, 0.5f);
+                    PlayClipFromItemAudio(9, playerID, 0.3f);
                     RoundManager.Instance.PlayAudibleNoise(player.transform.position, 30f, 1, 0, false);
                 }
             }
@@ -529,7 +598,7 @@ namespace EmployeeClasses.Roles
             } else if (ability == "HACK" && holdTimer >= 0.6f)
             {
                 StopItemAudio(playerID);
-                PlayClipFromItemAudio(9, playerID, 0.5f);
+                PlayClipFromItemAudio(9, playerID, 0.3f);
                 RoundManager.Instance.PlayAudibleNoise(player.transform.position, 30f, 1, 0, false);
             }
 
@@ -720,7 +789,7 @@ namespace EmployeeClasses.Roles
 
         public void UpdateBeacon()
         {
-            player.sprintMeter = 100f;
+            sprintMeter = 1f;
         }
 
         public void UpdateBeaconClient(int playerID)
@@ -755,7 +824,7 @@ namespace EmployeeClasses.Roles
 
         public void TriggerKick()
         {
-            if (!active && player.sprintMeter > 0.1f)
+            if (!active && sprintMeter > KICK_COST)
             {
                 active = true;
                 if (abilityRoutine != null)
@@ -802,10 +871,10 @@ namespace EmployeeClasses.Roles
 
         private void HitKick()
         {
-            if (player.sprintMeter >= 0.1f)
-                player.sprintMeter -= 0.1f;
+            if (sprintMeter >= KICK_COST)
+                sprintMeter -= KICK_COST;
             else
-                player.sprintMeter = 0;
+                sprintMeter = 0;
 
             player.activatingItem = false;
             player.twoHanded = false;
@@ -842,13 +911,12 @@ namespace EmployeeClasses.Roles
                     if (component.GetType() == typeof(EnemyAICollisionDetect))
                     {
                         ((EnemyAICollisionDetect)component).mainScript.SetEnemyStunned(true, 2f);
-                        ((EnemyAICollisionDetect)component).mainScript.postStunInvincibilityTimer = 1f;
                     }
                     flag2 = true;
                 }
             }
 
-            RaycastHit[] doorObjects = Physics.SphereCastAll(player.gameplayCamera.transform.position + player.gameplayCamera.transform.right * -0.35f, 0.8f, player.gameplayCamera.transform.forward, 1.5f, 1 << LayerMask.NameToLayer("InteractableObject"), QueryTriggerInteraction.Collide);
+            /*RaycastHit[] doorObjects = Physics.SphereCastAll(player.gameplayCamera.transform.position + player.gameplayCamera.transform.right * -0.35f, 0.8f, player.gameplayCamera.transform.forward, 1.5f, 1 << LayerMask.NameToLayer("InteractableObject"), QueryTriggerInteraction.Collide);
             List<RaycastHit> doorObjectsList = doorObjects.OrderBy((RaycastHit x) => x.distance).ToList();
             for (int i = 0; i < doorObjectsList.Count; i++)
             {
@@ -869,7 +937,7 @@ namespace EmployeeClasses.Roles
                         flag2 = true;
                     }
                 }
-            }
+            }*/
 
             if (flag)
             {
@@ -884,7 +952,7 @@ namespace EmployeeClasses.Roles
             }
 
             if (flag2)
-                abilityCooldown = 7;
+                abilityCooldown = 0;
         }
 
         private void EndKick()
@@ -1031,9 +1099,9 @@ namespace EmployeeClasses.Roles
             else
                 player.drunkness += .2f;
 
-            player.sprintMeter += 0.1f;
-            if (player.sprintMeter > 1)
-                player.sprintMeter = 1;
+            sprintMeter += 0.2f;
+            if (sprintMeter > 1)
+                sprintMeter = 1;
 
             player.health += (int)(maxHealth * 0.3f);
             if (player.health > maxHealth)
@@ -1061,7 +1129,7 @@ namespace EmployeeClasses.Roles
             foreach (RaycastHit hit in hitList)
             {
                 TerminalAccessibleObject component;
-                if (hit.transform.TryGetComponent<TerminalAccessibleObject>(out component))
+                if (hit.transform.TryGetComponent<TerminalAccessibleObject>(out component) && !Physics.Linecast(player.gameplayCamera.transform.position, hit.point, StartOfRound.Instance.collidersAndRoomMask))
                         return true;
             }
             return false;
@@ -1069,7 +1137,7 @@ namespace EmployeeClasses.Roles
 
         private void BeginHack()
         {
-            PlayClipFromItemAudio(8, playerID, 0.5f);
+            PlayClipFromItemAudio(8, playerID, 1f);
             RoundManager.Instance.PlayAudibleNoise(player.transform.position, 30f, 1, 0, false);
         }
 
@@ -1136,8 +1204,10 @@ namespace EmployeeClasses.Roles
         [ClientRpc]
         public void CreateHeadlampClientRpc(int playerID)
         {
-
             PlayerControllerB player = StartOfRound.Instance.allPlayerScripts[playerID];
+
+            if (player.GetComponent<RoleManager>().headlamp != null)
+                return;
 
             GameObject headlamp = Instantiate(ModBase.assets.LoadAsset<GameObject>("Headlamp"));
 

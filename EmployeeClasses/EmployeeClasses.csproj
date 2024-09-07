@@ -48,11 +48,18 @@
     <Reference Include="AsmResolver.PE.File, Version=5.5.1.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\BepInEx.AssemblyPublicizer.MSBuild.0.4.2\lib\net472\AsmResolver.PE.File.dll</HintPath>
     </Reference>
-    <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Assembly-CSharp.dll</HintPath>
+    <Reference Include="Assembly-CSharp-publicized, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>bin\Debug\Assembly-CSharp-publicized.dll</HintPath>
     </Reference>
     <Reference Include="BepInEx">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\BepInEx\core\BepInEx.dll</HintPath>
+    </Reference>
+    <Reference Include="BepInEx.AssemblyPublicizer, Version=0.4.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\BepInEx.AssemblyPublicizer.MSBuild.0.4.2\lib\net472\BepInEx.AssemblyPublicizer.dll</HintPath>
+    </Reference>
+    <Reference Include="BepInEx.AssemblyPublicizer.MSBuild, Version=0.4.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\BepInEx.AssemblyPublicizer.MSBuild.0.4.2\lib\net472\BepInEx.AssemblyPublicizer.MSBuild.dll</HintPath>
     </Reference>
     <Reference Include="LethalCompanyInputUtils">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\BepInEx\plugins\LethalCompanyInputUtils\LethalCompanyInputUtils.dll</HintPath>
@@ -72,6 +79,10 @@
     <Reference Include="Unity.Netcode.Runtime, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Unity.Netcode.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.RenderPipelines.HighDefinition.Runtime, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Unity.RenderPipelines.HighDefinition.Runtime.dll</HintPath>
     </Reference>
     <Reference Include="Unity.TextMeshPro, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -111,6 +122,7 @@
     <Compile Include="Patches\HUDManagerPatch.cs" />
     <Compile Include="Patches\PlayerControllerBPAtch.cs" />
     <Compile Include="Patches\QuickMenuManagerPatch.cs" />
+    <Compile Include="Patches\RoundManagerPatch.cs" />
     <Compile Include="Patches\ShovelPatch.cs" />
     <Compile Include="Patches\StartOfRoundPatch.cs" />
     <Compile Include="Patches\TimeOfDayPatch.cs" />
@@ -130,7 +142,5 @@
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Target Name="NetcodePatch" AfterTargets="PostBuildEvent">
-    <Exec Command="netcode-patch -nv 1.5.2 &quot;$(TargetPath)&quot; @(ReferencePathWithRefAssemblies->'&quot;%(Identity)&quot;', ' ')" />
-  </Target>
+
 </Project>

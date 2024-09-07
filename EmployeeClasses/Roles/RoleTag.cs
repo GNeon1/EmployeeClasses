@@ -25,7 +25,8 @@ namespace EmployeeClasses.Roles
             BULLET_DAMAGE = 12,
             ALWAYS_CLOCK = 13,
             HEADLAMP = 14,
-            SPRINT_TIME = 15
+            SPRINT_TIME = 15,
+            FOG_VISIBILITY = 16
         }
 
         public int Id;

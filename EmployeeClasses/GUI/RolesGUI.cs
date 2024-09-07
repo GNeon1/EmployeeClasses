@@ -27,21 +27,21 @@ namespace EmployeeClasses.GUI
             {
                 new RoleTag((int)RoleTag.Ids.SPRINT_MULTIPLIER, 1.3f),
                 new RoleTag((int)RoleTag.Ids.MAX_HEALTH, 50),
-                new RoleTag((int)RoleTag.Ids.WEIGHT_PENALTY, 1.8f),
+                new RoleTag((int)RoleTag.Ids.WEIGHT_PENALTY, 1.7f),
                 new RoleTag((int)RoleTag.Ids.OXYGEN, 1.8f),
                 new RoleTag((int)RoleTag.Ids.FALL_DAMAGE, 0.5f),
-                new RoleTag((int)RoleTag.Ids.WEIGHT_PENALTY_THRESH, 20f)
-            }, "BEACON", "Agile but fragile. Scouts can quickly traverse the facility and outrun monsters with ease, albeit their small build doesn't allow for much in the way of strength. Getting in is easy, but getting out? Not so much."),
+                new RoleTag((int)RoleTag.Ids.WEIGHT_PENALTY_THRESH, 30f)
+            }, "BEACON", ""),
             new Role("Brute", new List<RoleTag>()
             {
                 new RoleTag((int)RoleTag.Ids.FOOTSTEP_VOLUME, 1.05f),
                 new RoleTag((int)RoleTag.Ids.MAX_HEALTH, 200),
-                new RoleTag((int)RoleTag.Ids.WEIGHT_PENALTY, 0.4f),
+                new RoleTag((int)RoleTag.Ids.WEIGHT_PENALTY, 0.5f),
                 new RoleTag((int)RoleTag.Ids.SPEED_MULTIPLIER, 0.85f),
                 new RoleTag((int)RoleTag.Ids.FALL_DAMAGE, 2f),
                 new RoleTag((int)RoleTag.Ids.ATTACK_DAMAGE, 2f),
                 new RoleTag((int)RoleTag.Ids.THREAT_LEVEL, 4)
-            }, "KICK", "Brutes are tough and slow. They boast extra durability and carry heavier items with impunity. They're the fighters and pack mules of the group."),
+            }, "KICK", ""),
             new Role("Researcher", new List<RoleTag>()
             {
                 new RoleTag((int)RoleTag.Ids.FOOTSTEP_VOLUME, 0.5f),
@@ -58,7 +58,8 @@ namespace EmployeeClasses.GUI
                 new RoleTag((int)RoleTag.Ids.BULLET_DAMAGE, 0.75f),
                 new RoleTag((int)RoleTag.Ids.ALWAYS_CLOCK),
                 new RoleTag((int)RoleTag.Ids.HEADLAMP),
-                new RoleTag((int)RoleTag.Ids.SPRINT_TIME, 0.9f)
+                new RoleTag((int)RoleTag.Ids.SPRINT_TIME, 1.15f),
+                new RoleTag((int)RoleTag.Ids.FOG_VISIBILITY, 0.5f)
             }, "HACK", ""),
             new Role("Employee", new List<RoleTag>(), "Just a boring old asset")
         };

@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using System.Runtime.CompilerServices;
 using UnityEngine.UI;
+using Unity.Netcode;
 
 namespace EmployeeClasses.Patches
 {
@@ -30,6 +31,8 @@ namespace EmployeeClasses.Patches
             light.intensity = 3;
             light.range = 3;
             lightContainer.SetActive(false);
+
+            __instance.usernameBillboardText.verticalAlignment = TMPro.VerticalAlignmentOptions.Bottom;
         }
 
         [HarmonyPatch(typeof(PlayerControllerB), "ConnectClientToPlayerObject")]
@@ -38,6 +41,8 @@ namespace EmployeeClasses.Patches
         {
             RoleManager.Instance = __instance.gameObject.GetComponent<RoleManager>();
             RoleManager.Instance.CreateHUD();
+            RoleManager.Instance.SyncRoles();
+            RoleManager.Instance.SyncClassObjects();
         }
 
         [HarmonyPatch(typeof(PlayerControllerB), "Update")]
@@ -102,47 +107,50 @@ namespace EmployeeClasses.Patches
 
         [HarmonyPatch(typeof(PlayerControllerB), "LateUpdate")]
         [HarmonyPostfix]
-        public static void CorrectMeterUI(bool ___isPlayerControlled, bool ___isPlayerDead, Image ___sprintMeterUI, float ___drunkness, ref bool ___isExhausted, bool ___isSprinting, bool ___isWalking, int ___isMovementHindered, float ___sprintTime)
+        public static void CorrectMeterUI(PlayerControllerB __instance, bool ___isPlayerControlled, bool ___isPlayerDead, Image ___sprintMeterUI, float ___drunkness, ref bool ___isExhausted, bool ___isSprinting, bool ___isWalking, int ___isMovementHindered, float ___sprintTime)
         {
-            float sprintMeter = RoleManager.Instance.sprintMeter;
-
-            float sprintTime = ___sprintTime;
-            float num3 = 1f;
-
-            if (___isPlayerControlled && !___isPlayerDead)
+            if (__instance.IsOwner && (!__instance.IsServer || __instance.isHostPlayerObject))
             {
-                if (___drunkness > 0.02f)
+                if (___isPlayerControlled && !___isPlayerDead)
                 {
-                    num3 *= Mathf.Abs(StartOfRound.Instance.drunknessSpeedEffect.Evaluate(___drunkness) - 1.25f);
-                }
+                    float sprintMeter = RoleManager.Instance.sprintMeter;
 
-                if (___isSprinting)
-                {
-                    sprintMeter = Mathf.Clamp(sprintMeter - Time.deltaTime / (sprintTime * RoleManager.Instance.sprintTime) * RoleManager.GetCarryWeight(0) * num3, 0f, 1f);
-                }
-                else if (___isMovementHindered > 0)
-                {
-                    if (___isWalking)
-                        sprintMeter = Mathf.Clamp(sprintMeter - Time.deltaTime / (sprintTime * RoleManager.Instance.sprintTime) * num3 * 0.5f, 0f, 1f);
-                }
-                else
-                {
-                    if (!___isWalking)
+                    float sprintTime = ___sprintTime;
+                    float num3 = 1f;
+
+                    if (___drunkness > 0.02f)
                     {
-                        sprintMeter = Mathf.Clamp(sprintMeter + Time.deltaTime / ((sprintTime * RoleManager.Instance.sprintTime) + 4f) * num3, 0f, 1f);
+                        num3 *= Mathf.Abs(StartOfRound.Instance.drunknessSpeedEffect.Evaluate(___drunkness) - 1.25f);
+                    }
+
+                    if (___isSprinting)
+                    {
+                        sprintMeter = Mathf.Clamp(sprintMeter - Time.deltaTime / (sprintTime * RoleManager.Instance.sprintTime) * RoleManager.GetCarryWeight(0) * num3, 0f, 1f);
+                    }
+                    else if (___isMovementHindered > 0)
+                    {
+                        if (___isWalking)
+                            sprintMeter = Mathf.Clamp(sprintMeter - Time.deltaTime / (sprintTime * RoleManager.Instance.sprintTime) * num3 * 0.5f, 0f, 1f);
                     }
                     else
                     {
-                        sprintMeter = Mathf.Clamp(sprintMeter + Time.deltaTime / ((sprintTime * RoleManager.Instance.sprintTime) + 9f) * num3, 0f, 1f);
+                        if (!___isWalking)
+                        {
+                            sprintMeter = Mathf.Clamp(sprintMeter + Time.deltaTime / ((sprintTime * RoleManager.Instance.sprintTime) + 4f) * num3, 0f, 1f);
+                        }
+                        else
+                        {
+                            sprintMeter = Mathf.Clamp(sprintMeter + Time.deltaTime / ((sprintTime * RoleManager.Instance.sprintTime) + 9f) * num3, 0f, 1f);
+                        }
+                        if (___isExhausted && sprintMeter > 0.2f)
+                        {
+                            ___isExhausted = false;
+                        }
                     }
-                    if (___isExhausted && sprintMeter > 0.2f)
-                    {
-                        ___isExhausted = false;
-                    }
-                }
 
-                RoleManager.Instance.sprintMeter = sprintMeter;
-                ___sprintMeterUI.fillAmount = sprintMeter;
+                    RoleManager.Instance.sprintMeter = sprintMeter;
+                    ___sprintMeterUI.fillAmount = sprintMeter;
+                }
             }
         }
 
@@ -353,11 +361,13 @@ namespace EmployeeClasses.Patches
             __result += RoleManager.GetThreatLevel();
         }
 
+        //if (!inSpecialInteractAnimation && !isTypingChat && (isMovementHindered <= 0 || isUnderwater) && !isExhausted && (thisController.isGrounded || (!isJumping && IsPlayerNearGround())) && !isJumping && (!isPlayerSliding || playerSlidingTimer > 2.5f) && !isCrouching)
         [HarmonyPatch(typeof(PlayerControllerB), "Jump_performed")]
-        [HarmonyPostfix]
-        public static void JumpPatch()
+        [HarmonyPrefix]
+        public static void JumpPatch(PlayerControllerB __instance, bool ___isJumping, float ___playerSlidingTimer)
         {
-            RoleManager.Instance.sprintMeter = Mathf.Clamp(RoleManager.Instance.sprintMeter - 0.08f, 0f, 1f);
+            if (!__instance.quickMenuManager.isMenuOpen && __instance.isPlayerControlled && !__instance.inSpecialInteractAnimation && !__instance.isTypingChat && (__instance.isMovementHindered <= 0 || __instance.isUnderwater) && !__instance.isExhausted && (__instance.thisController.isGrounded && (!___isJumping || __instance.IsPlayerNearGround())) && !___isJumping && (!__instance.isPlayerSliding || ___playerSlidingTimer > 2.5f) && !__instance.isCrouching)
+                RoleManager.Instance.sprintMeter = Mathf.Clamp(RoleManager.Instance.sprintMeter - 0.08f, 0f, 1f);
         }
 
     }
