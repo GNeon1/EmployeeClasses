@@ -26,7 +26,7 @@ namespace EmployeeClasses
     {
         private const string modGUID = "Jade.EmployeeClasses";
         private const string modName = "EmployeeClasses";
-        private const string modVersion = "0.1.3";
+        private const string modVersion = "0.1.2";
 
         private readonly Harmony harmony = new Harmony(modGUID);
 

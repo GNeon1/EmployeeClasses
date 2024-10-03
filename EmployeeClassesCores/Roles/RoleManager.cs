@@ -138,8 +138,6 @@ namespace EmployeeClasses.Roles
             if (headlamp != null)
                 DestroyHeadlamp();
 
-            selectedRole = "Employee";
-
             sprintMeter = 1;
 
             maxSprintSpeed = 2.25f;
@@ -310,17 +308,7 @@ namespace EmployeeClasses.Roles
         public void BroadcastRoleClientRpc()
         {
             if (NetworkManager.Singleton.IsHost)
-                ApplyRoleClientRpc(playerID, footstepVolume, selectedRole);
-            else
                 ApplyRoleServerRpc(playerID, footstepVolume, selectedRole);
-        }
-
-        public void SyncClassObjects()
-        {
-            if (NetworkManager.Singleton.IsHost)
-                SyncClassObjectsClientRpc();
-            else
-                SyncClassObjectsServerRpc();
         }
 
         [ServerRpc(RequireOwnership = false)]
@@ -336,9 +324,9 @@ namespace EmployeeClasses.Roles
                 CreateHeadlamp();
 
             if (NetworkManager.Singleton.IsHost)
-                ApplyRoleClientRpc(playerID, footstepVolume, selectedRole); 
-            else
                 ApplyRoleServerRpc(playerID, footstepVolume, selectedRole);
+            else
+                ApplyRoleClientRpc(playerID, footstepVolume, selectedRole);
         }
 
         public static float GetScanRange(float range)
@@ -927,7 +915,7 @@ namespace EmployeeClasses.Roles
                     {
                         ((EnemyAICollisionDetect)component).mainScript.SetEnemyStunned(true);
                         if (player.inAnimationWithEnemy == ((EnemyAICollisionDetect)component).mainScript)
-                            player.DamagePlayer(50, true, true, CauseOfDeath.Kicking);
+                            player.DamagePlayer(20, true, true, CauseOfDeath.Kicking);
                     }
                     flag2 = true;
                 }

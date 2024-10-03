@@ -42,7 +42,7 @@ namespace EmployeeClasses.Patches
             RoleManager.Instance = __instance.gameObject.GetComponent<RoleManager>();
             RoleManager.Instance.CreateHUD();
             RoleManager.Instance.reset();
-            RoleManager.Instance.SyncClassObjects();
+            RoleManager.Instance.SyncRoles();
         }
 
         [HarmonyPatch(typeof(PlayerControllerB), "Update")]
